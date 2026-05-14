@@ -193,6 +193,55 @@ public class VentaModel {
 }
 ```
 
+### Ejemplo 4: Interés Simple con Literales
+
+En las expresiones, también puedes usar números literales directamente.
+
+```java
+public class PrestamoModel {
+    private Double capital;
+    private Double tasaMensual;
+    private Double meses;
+
+    @Compute(operation=OperationType.INTEREST, fields={"capital", "tasaMensual", "meses"})
+    private Double interesTotal;
+    
+    @Compute(operation=OperationType.SUM, fields={"capital", "interesTotal"})
+    private Double montoAPagar;
+}
+```
+
+### Ejemplo 5: Cálculo de Nómina Complejo (Chaining)
+
+```java
+public class NominaDetalle {
+    private Double salarioBase;
+    private Double horasExtras;
+    private Double precioHoraExtra;
+    private Double retenciones;
+
+    @Compute(operation=OperationType.MULT, fields={"horasExtras", "precioHoraExtra"})
+    private Double montoExtras;
+
+    // SalarioBase + MontoExtras - Retenciones
+    @Compute(expression="SUM(salarioBase, montoExtras).APPLY(SUBTRACTION(BEFORE, retenciones))")
+    private Double salarioNeto;
+}
+```
+
+### Ejemplo 6: Uso de MAX y MIN para Stock de Seguridad
+
+```java
+public class InventarioModel {
+    private Integer stockActual;
+    private Integer stockMinimoRequerido;
+
+    // Calcula cuánto falta para el mínimo, pero asegura que no sea negativo (mínimo 0)
+    @Compute(expression="SUBTRACTION(stockMinimoRequerido, stockActual).APPLY(MAX(BEFORE, 0))")
+    private Integer cantidadAComprar;
+}
+```
+
 ---
 
 ## Ejecución del Motor de Cómputo
