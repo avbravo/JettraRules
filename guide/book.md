@@ -114,6 +114,107 @@ List<RuleResult> results = JettraRulesEngine.validate(producto, myMessages);
 
 Si la clave no se encuentra en el archivo de propiedades, el motor utilizará el valor del atributo `message` como un mensaje literal.
 
-## Integration with JettraWUI
+## La Anotación @Compute
 
-`JettraRules` can be integrated with `CrudView` to provide real-time validation feedback in the UI. When a form is submitted, the engine validates the model and returns notifications to the user if any rule is violated.
+La anotación `@Compute` permite realizar cálculos dinámicos entre campos y almacenar el resultado en un atributo del ViewModel. Soporta tanto operaciones simples como expresiones complejas encadenadas.
+
+### Atributos
+
+- **operation**: Operación matemática o de negocio (Enum `OperationType`).
+- **fields**: Lista de campos que intervienen en la operación.
+- **expression**: Cadena que define una lógica compleja (condicionales, encadenamiento).
+
+### Operaciones Disponibles (OperationType)
+
+| Operación | Descripción |
+|-----------|-------------|
+| `SUM` | Suma todos los campos listados. |
+| `SUBTRACTION` | Resta al primer campo los valores de los siguientes. |
+| `MULT` | Multiplica los valores de los campos. |
+| `DIV` | Divide el primer valor entre los subsecuentes. |
+| `PERCENTAGE` | Calcula el porcentaje (campo1 * campo2 / 100). |
+| `MAX` / `MIN` | Obtiene el valor máximo o mínimo. |
+| `TAX` / `INTEREST` | Operaciones financieras predefinidas. |
+
+---
+
+## Expresiones Complejas y Encadenamiento
+
+Para casos donde una simple operación no es suficiente, se utiliza el atributo `expression`. Este permite usar la sintaxis `.APPLY()` y condicionales `IF`.
+
+### RESULT.BEFORE
+Dentro de una expresión encadenada, `RESULT.BEFORE` (o simplemente `BEFORE`) hace referencia al resultado obtenido por la operación inmediatamente anterior.
+
+---
+
+## Ejemplos de Uso Combinado (@Rules y @Compute)
+
+### Ejemplo 1: Cálculo de Saldo Neto con Regla de Validación
+
+```java
+public class CuentaModel {
+    private Double saldo;
+    
+    @Rules(apply="lessorequals", than="saldo", message="El descuento no puede ser mayor al saldo")
+    private Double descuento;
+
+    @Compute(operation=OperationType.SUBTRACTION, fields={"saldo", "descuento"})
+    private Double saldoNeto;
+}
+```
+
+### Ejemplo 2: Cálculo Condicional de Bonificación (Uso de expression)
+
+En este ejemplo, si el ITBMS es menor a 0.05, se aplica una multiplicación, de lo contrario se realiza una suma.
+
+```java
+public class NominaModel {
+    private Double saldo;
+    private Double descuento;
+    private Double itbms;
+
+    @Compute(expression="SUBTRACTION(saldo, descuento).APPLY(IF(itbms, LESS, 0.05).THEN(MULT(BEFORE, itbms)).ELSE(SUM(saldo, itbms)))")
+    private Double montoEspecial;
+}
+```
+
+### Ejemplo 3: Impuestos y Totales
+
+```java
+public class VentaModel {
+    private Double subtotal;
+    private Double tasaImpuesto; // ej: 7.0
+
+    @Compute(operation=OperationType.PERCENTAGE, fields={"subtotal", "tasaImpuesto"})
+    private Double impuestoCalculado;
+
+    @Compute(operation=OperationType.SUM, fields={"subtotal", "impuestoCalculado"})
+    private Double totalFactura;
+}
+```
+
+---
+
+## Ejecución del Motor de Cómputo
+
+A diferencia de las reglas que devuelven resultados de validación, el motor de cómputo modifica el estado del objeto:
+
+```java
+VentaModel venta = new VentaModel();
+venta.setSubtotal(100.0);
+venta.setTasaImpuesto(7.0);
+
+// Ejecuta los cálculos
+JettraComputeEngine.compute(venta);
+
+System.out.println("Impuesto: " + venta.getImpuestoCalculado()); // 7.0
+System.out.println("Total: " + venta.getTotalFactura()); // 107.0
+```
+
+## Integración en Ciclo de Vida
+
+Normalmente, en un entorno JettraWUI, el flujo recomendado es:
+1. Capturar datos del formulario.
+2. Ejecutar `JettraComputeEngine.compute(model)`.
+3. Ejecutar `JettraRulesEngine.validate(model)`.
+4. Si las reglas pasan, persistir el modelo.
