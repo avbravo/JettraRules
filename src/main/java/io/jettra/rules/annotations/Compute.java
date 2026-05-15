@@ -27,4 +27,10 @@ public @interface Compute {
      * Supports Syntax like: SUBTRACTION(f1, f2).APPLY(IF(f3 > 0).THEN(MULT(BEFORE, f3)))
      */
     String expression() default "";
+
+    /**
+     * Indicates if the field is editable in the UI.
+     * Default is false.
+     */
+    boolean editable() default false;
 }

@@ -123,6 +123,7 @@ La anotación `@Compute` permite realizar cálculos dinámicos entre campos y al
 - **operation**: Operación matemática o de negocio (Enum `OperationType`).
 - **fields**: Lista de campos que intervienen en la operación.
 - **expression**: Cadena que define una lógica compleja (condicionales, encadenamiento).
+- **editable**: Indica si el atributo será editable en una interfaz. Por defecto es `false`. Si está en `false`, indica que el valor se actualizará de manera automática basándose en los campos establecidos en la anotación.
 
 ### Operaciones Disponibles (OperationType)
 
@@ -158,7 +159,7 @@ public class CuentaModel {
     @Rules(apply="lessorequals", than="saldo", message="El descuento no puede ser mayor al saldo")
     private Double descuento;
 
-    @Compute(operation=OperationType.SUBTRACTION, fields={"saldo", "descuento"})
+    @Compute(operation=OperationType.SUBTRACTION, fields={"saldo", "descuento"}, editable=false)
     private Double saldoNeto;
 }
 ```
